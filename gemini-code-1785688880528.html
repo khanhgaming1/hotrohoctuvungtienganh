@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Vocab - Block Blast Ultimate (Auth & Fixed XP)</title>
+  <style>
+    :root {
+      --primary: #00f2fe;
+      --accent: #7f00ff;
+      --fever: #ff007f;
+      --success: #00ff88;
+      --danger: #ff0055;
+      --warning: #ffb700;
+      --combo-color: #00f2fe;
+      --bg-dark: #03030c;
+      --glass-bg: rgba(12, 12, 32, 0.88);
+      --glass-border: rgba(255, 255, 255, 0.18);
+      --text: #ffffff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; user-select: none; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: var(--bg-dark); color: var(--text); transition: background 0.5s; }
+
+    #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+
+    /* AUTH MODAL */
+    .auth-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(3, 3, 12, 0.85); backdrop-filter: blur(15px);
+      z-index: 1000; display: flex; justify-content: center; align-items: center;
+    }
+    .auth-card {
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      padding: 30px; border-radius: 28px; width: 90%; max-width: 420px;
+      display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+    }
+    .auth-tabs { display: flex; justify-content: space-around; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 5px; }
+    .auth-tab { font-weight: 800; cursor: pointer; color: rgba(255,255,255,0.5); transition: 0.2s; }
+    .auth-tab.active { color: var(--primary); font-size: 1.1rem; text-shadow: 0 0 10px var(--primary); }
+
+    /* Top HUD Bar */
+    .hud-bar {
+      position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+      width: 92%; max-width: 950px; z-index: 100; display: flex; justify-content: space-between; align-items: center;
+      background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(20px);
+      padding: 10px 20px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+    .hud-group { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.9rem; }
+    .badge { background: linear-gradient(135deg, var(--primary), var(--accent)); padding: 4px 10px; border-radius: 12px; }
+    .user-profile-badge { display: flex; align-items: center; gap: 6px; cursor: pointer; background: rgba(255,255,255,0.08); padding: 4px 12px; border-radius: 12px; border: 1px solid var(--glass-border); }
+
+    /* XP Progress Bar */
+    .xp-bar-container { width: 100px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; position: relative; }
+    .xp-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00ff88, #00f2fe); transition: width 0.3s; }
+
+    /* Card Container */
+    .card-container {
+      position: fixed; top: 52%; left: 50%; transform: translate(-50%, -50%);
+      width: 92%; max-width: 580px; z-index: 20; transition: transform 0.15s ease-out;
+    }
+    .card {
+      background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(25px);
+      border-radius: 28px; padding: 28px; box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+      display: none; flex-direction: column; gap: 16px; max-height: 82vh; overflow-y: auto;
+    }
+    .card.active { display: flex; animation: cardPop 0.3s ease-out; }
+    @keyframes cardPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .game-title { font-size: 2.3rem; text-align: center; font-weight: 900; background: linear-gradient(135deg, #fff, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 1px; }
+
+    /* Buttons */
+    .action-btn {
+      position: relative; padding: 14px 24px; border-radius: 18px; border: none;
+      background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff;
+      font-weight: 900; font-size: 1.05rem; cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0, 242, 254, 0.4); transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-align: center;
+    }
+    .action-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 15px 30px rgba(0, 242, 254, 0.6); }
+    .action-btn:active { transform: translateY(1px) scale(0.98); }
+
+    .btn-start-big {
+      padding: 18px 36px; font-size: 1.3rem;
+      background: linear-gradient(135deg, #00ff88, #00f2fe); color: #03030c;
+      box-shadow: 0 12px 35px rgba(0, 255, 136, 0.5);
+    }
+
+    /* Form Inputs */
+    .input-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.85); }
+    input[type="text"], input[type="number"], input[type="email"], input[type="password"] {
+      padding: 12px 16px; border-radius: 14px; border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.08); color: #fff; font-size: 1rem; outline: none; text-align: center;
+    }
+    input:focus { border-color: var(--primary); background: rgba(255, 255, 255, 0.15); box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); }
+    .word-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    /* Gameplay Styling */
+    .word-display { font-size: 2.6rem; font-weight: 900; text-align: center; text-shadow: 0 0 25px var(--combo-color); margin: 2px 0; transition: color 0.3s; }
+    .mode-hint { font-size: 0.85rem; text-align: center; font-weight: 700; color: var(--warning); letter-spacing: 1px; }
+    .status-msg { text-align: center; font-weight: 800; font-size: 1rem; min-height: 24px; }
+    
+    /* Progress Bar */
+    .progress-bar-wrap { width: 100%; height: 14px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; position: relative; }
+    .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--success)); transition: width 0.3s; }
+    .progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.7rem; font-weight: 900; text-shadow: 0 0 4px #000; }
+
+    /* Combo Decay Bar */
+    .combo-decay-wrap { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+    .combo-decay-fill { height: 100%; width: 100%; background: var(--combo-color); transition: width 0.1s linear; }
+
+    /* Animations & Camera Effects */
+    .camera-shake { animation: shake 0.25s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake {
+      10%, 90% { transform: translate(-52%, -50%); }
+      20%, 80% { transform: translate(-48%, -50%); }
+      30%, 50%, 70% { transform: translate(-54%, -50%); }
+      40%, 60% { transform: translate(-46%, -50%); }
+    }
+    .card-zoom { transform: translate(-50%, -50%) scale(1.05) !important; }
+
+    /* BLOCK BLAST COMBO PRAISE POPUP */
+    .praise-text {
+      position: fixed; top: 38%; left: 50%; transform: translate(-50%, -50%) scale(0.3);
+      font-size: 3.8rem; font-weight: 900; font-style: italic; text-transform: uppercase;
+      background: linear-gradient(135deg, #fff 0%, var(--warning) 50%, var(--fever) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(255, 0, 127, 0.8); pointer-events: none; z-index: 200; opacity: 0;
+    }
+    .praise-animate { animation: praisePop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    @keyframes praisePop {
+      0% { transform: translate(-50%, -40%) scale(0.3) rotate(-5deg); opacity: 0; }
+      40% { transform: translate(-50%, -50%) scale(1.2) rotate(3deg); opacity: 1; }
+      70% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translate(-50%, -65%) scale(1.1) rotate(2deg); opacity: 0; }
+    }
+
+    /* Floating XP Text */
+    .xp-float {
+      position: fixed; font-weight: 900; font-size: 1.8rem; color: var(--success);
+      text-shadow: 0 0 10px #000; pointer-events: none; z-index: 210;
+      animation: floatUp 0.9s ease-out forwards;
+    }
+    @keyframes floatUp {
+      0% { transform: translate(-50%, 0) scale(0.8); opacity: 1; }
+      100% { transform: translate(-50%, -60px) scale(1.2); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- MODAL ĐĂNG NHẬP / ĐĂNG KÝ -->
+  <div id="auth-modal" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <span id="tab-login" class="auth-tab active" onclick="Auth.switchTab('login')">Đăng Nhập</span>
+        <span id="tab-register" class="auth-tab" onclick="Auth.switchTab('register')">Đăng Ký</span>
+      </div>
+
+      <div class="input-group" id="group-displayname" style="display:none;">
+        <label>Tên hiển thị:</label>
+        <input type="text" id="auth-name" placeholder="VD: Hunter Pro">
+      </div>
+
+      <div class="input-group">
+        <label>Email:</label>
+        <input type="email" id="auth-email" placeholder="example@gmail.com">
+      </div>
+
+      <div class="input-group">
+        <label>Mật khẩu:</label>
+        <input type="password" id="auth-pass" placeholder="••••••••">
+      </div>
+
+      <button class="action-btn" id="btn-auth-submit" onclick="Auth.handleSubmit()" style="margin-top:10px;">XÁC NHẬN</button>
+    </div>
+  </div>
+
+  <!-- BLOCK BLAST COMBO PRAISE TEXT -->
+  <div id="praise-text" class="praise-text">GREAT!</div>
+
+  <!-- Top HUD -->
+  <div class="hud-bar">
+    <div class="user-profile-badge" onclick="Auth.logout()" title="Bấm để đăng xuất">
+      <span>👤</span>
+      <span id="hud-username" style="color:var(--primary)">Guest</span>
+    </div>
+    <div class="hud-group">
+      <span>🏆 <span id="hud-title">Language Hunter</span></span>
+      <span class="badge" id="hud-level">Lv.1</span>
+    </div>
+    <div class="hud-group">
+      <span>⚡ XP:</span>
+      <div class="xp-bar-container"><div class="xp-bar-fill" id="hud-xp-fill"></div></div>
+      <span id="hud-xp-text">0</span>
+    </div>
+  </div>
+
+  <div class="card-container" id="card-container">
+    
+    <!-- STEP 1: Màn hình chính -->
+    <div id="start-card" class="card active">
+      <h1 class="game-title">SPACE VOCAB</h1>
+      <p style="text-align:center; color:#aaa; font-size:0.85rem;">BLOCK BLAST GAMIFIED VOCABULARY</p>
+
+      <div class="input-group">
+        <label>Nhập số lượng từ vựng muốn học:</label>
+        <input type="number" id="num-words" min="1" max="50" value="3">
+      </div>
+
+      <div class="input-group">
+        <label>Số lần lặp lại toàn bộ bộ từ (Loops):</label>
+        <input type="number" id="num-loops" min="1" max="100" value="2">
+      </div>
+
+      <button class="action-btn btn-start-big" id="btn-next-step">🚀 START - TẠO BỘ TỪ</button>
+    </div>
+
+    <!-- STEP 2: Nhập danh sách Từ Vựng -->
+    <div id="setup-card" class="card">
+      <h2 style="text-align: center; font-weight: 800;">NHẬP DANH SÁCH TỪ</h2>
+      <div id="words-inputs-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+      
+      <button class="action-btn btn-start-big" id="btn-start-game">⚡ VÀO TRẬN NGAY</button>
+    </div>
+
+    <!-- STEP 3: Màn hình Học / Kiểm tra -->
+    <div id="quiz-card" class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:800; font-size:0.9rem;">🔄 Lặp: <span id="hud-loop">1/2</span></span>
+        <span style="font-weight:900; font-size:1.1rem; color: var(--combo-color);" id="hud-combo-text">🔥 Combo x1</span>
+        <span style="font-weight:800; font-size:0.9rem;">📍 Vị trí: <span id="hud-pos">1/3</span></span>
+      </div>
+
+      <!-- Combo Decay Timer Bar -->
+      <div class="combo-decay-wrap"><div class="combo-decay-fill" id="combo-decay-fill"></div></div>
+
+      <!-- Progress Bar -->
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+        <div class="progress-text" id="progress-text">0%</div>
+      </div>
+
+      <div class="status-msg" id="status-text" style="color: var(--primary);">Đúng để giữ chuỗi Combo!</div>
+      <div class="mode-hint" id="mode-hint">NHÌN TIẾNG VIỆT ➡️ GÕ TIẾNG ANH</div>
+      <div class="word-display" id="quiz-word">---</div>
+      
+      <input type="text" id="user-answer" placeholder="Nhập đáp án..." autocomplete="off" spellcheck="false">
+      <button id="btn-check" class="action-btn">GỬI ĐÁP ÁN (Enter)</button>
+    </div>
+
+    <!-- STEP 4: Màn hình Victory cực phê -->
+    <div id="finish-card" class="card">
+      <h1 class="game-title">MISSION COMPLETE! 🎆</h1>
+      <p style="text-align:center; font-size:1.1rem; color:var(--success); font-weight:900;">⭐⭐⭐ PERFECT 100% ⭐⭐⭐</p>
+      <div style="text-align:center; font-size:1.2rem; font-weight:800;" id="victory-stats">+0 XP RECEIVED!</div>
+      <button class="action-btn btn-start-big" onclick="location.reload()">🔄 HỌC BỘ TỪ MỚI</button>
+    </div>
+
+  </div>
+
+  <script>
+    /* ================================================================
+       1. AUTHENTICATION & FIXED USER DATA SYSTEM
+    ================================================================ */
+    const Auth = {
+      mode: 'login',
+      currentUser: null,
+
+      init() {
+        const session = localStorage.getItem('vocab_active_session');
+        if (session) {
+          this.currentUser = JSON.parse(session);
+          document.getElementById('auth-modal').style.display = 'none';
+          this.loadUserData();
+        } else {
+          document.getElementById('auth-modal').style.display = 'flex';
+        }
+      },
+
+      switchTab(mode) {
+        this.mode = mode;
+        document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+        document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+        document.getElementById('group-displayname').style.display = mode === 'register' ? 'flex' : 'none';
+        document.getElementById('btn-auth-submit').textContent = mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN';
+      },
+
+      handleSubmit() {
+        const email = document.getElementById('auth-email').value.trim().toLowerCase();
+        const pass = document.getElementById('auth-pass').value.trim();
+        const name = document.getElementById('auth-name').value.trim();
+
+        if (!email || !pass) {
+          alert('Vui lòng điền đầy đủ Email và Mật khẩu!');
+          return;
+        }
+
+        const dbUsers = JSON.parse(localStorage.getItem('vocab_db_users') || '{}');
+
+        if (this.mode === 'register') {
+          if (!name) { alert('Vui lòng nhập Tên hiển thị!'); return; }
+          if (dbUsers[email]) { alert('Email này đã được đăng ký!'); return; }
+
+          const newUser = {
+            id: 'USR_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+            displayName: name,
+            email: email,
+            password: pass,
+            totalXP: 0,
+            level: 1
+          };
+
+          dbUsers[email] = newUser;
+          localStorage.setItem('vocab_db_users', JSON.stringify(dbUsers));
+          this.loginSuccess(newUser);
+
+        } else {
+          const user = dbUsers[email];
+          if (!user || user.password !== pass) {
+            alert('Email hoặc mật khẩu không chính xác!');
+            return;
+          }
+          this.loginSuccess(user);
+        }
+      },
+
+      loginSuccess(user) {
+        this.currentUser = user;
+        localStorage.setItem('vocab_active_session', JSON.stringify(user));
+        document.getElementById('auth-modal').style.display = 'none';
+        this.loadUserData();
+      },
+
+      logout() {
+        if (confirm('Bạn muốn đăng xuất?')) {
+          localStorage.removeItem('vocab_active_session');
+          location.reload();
+        }
+      },
+
+      loadUserData() {
+        if (!this.currentUser) return;
+        Game.totalXP = this.currentUser.totalXP || 0;
+        Game.level = this.currentUser.level || 1;
+        document.getElementById('hud-username').textContent = this.currentUser.displayName;
+        Game.updateHUD();
+      },
+
+      saveXP(addedXP) {
+        if (!this.currentUser) return;
+        this.currentUser.totalXP = (this.currentUser.totalXP || 0) + addedXP;
+        this.currentUser.level = Math.floor(this.currentUser.totalXP / 300) + 1;
+
+        // Cập nhật session & DB
+        localStorage.setItem('vocab_active_session', JSON.stringify(this.currentUser));
+        const dbUsers = JSON.parse(localStorage.getItem('vocab_db_users') || '{}');
+        if (dbUsers[this.currentUser.email]) {
+          dbUsers[this.currentUser.email].totalXP = this.currentUser.totalXP;
+          dbUsers[this.currentUser.email].level = this.currentUser.level;
+          localStorage.setItem('vocab_db_users', JSON.stringify(dbUsers));
+        }
+
+        Game.totalXP = this.currentUser.totalXP;
+        Game.updateHUD();
+      }
+    };
+
+    /* ================================================================
+       2. SYNTHESIZER AUDIO ENGINE (BGM + GAMIFIED SFX)
+    ================================================================ */
+    class BlockBlastAudio {
+      constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.bgmTimer = null;
+      }
+
+      resume() { if (this.ctx.state === 'suspended') this.ctx.resume(); }
+
+      playBGM() {
+        this.resume();
+        if (this.bgmTimer) return;
+        const notes = [261.63, 293.66, 329.63, 392.00, 440.00];
+        let idx = 0;
+        this.bgmTimer = setInterval(() => {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(notes[idx % notes.length] / 2, now);
+          gain.gain.setValueAtTime(0.02, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now); osc.stop(now + 1.8);
+          idx++;
+        }, 2000);
+      }
+
+      playPop() {
+        this.resume();
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(this.ctx.currentTime + 0.04);
+      }
+
+      playCorrect(combo) {
+        this.resume();
+        const now = this.ctx.currentTime;
+        const freq = 400 + Math.min(combo, 12) * 60;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.4, now + 0.15);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(now + 0.15);
+      }
+
+      playCritical() {
+        this.resume();
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(f, now + i * 0.05);
+          gain.gain.setValueAtTime(0.2, now + i * 0.05);
+          gain.gain.linearRampToValueAtTime(0.01, now + i * 0.05 + 0.15);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.15);
+        });
+      }
+
+      playWrong() {
+        this.resume();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(60, now + 0.25);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination);
+        osc.start(); osc.stop(now + 0.25);
+      }
+
+      playVictory() {
+        this.resume();
+        const now = this.ctx.currentTime;
+        [400, 523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+          const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+          osc.type = 'triangle'; osc.frequency.setValueAtTime(f, now + i * 0.1);
+          gain.gain.setValueAtTime(0.25, now + i * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.4);
+          osc.connect(gain); gain.connect(this.ctx.destination);
+          osc.start(now + i * 0.1); osc.stop(now + i * 0.1 + 0.4);
+        });
+      }
+    }
+
+    const audio = new BlockBlastAudio();
+
+    /* ================================================================
+       3. PARTICLES & VISUAL FX ENGINE
+    ================================================================ */
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [], shockwaves = [];
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+
+    function createExplosion(x, y, color, count = 60) {
+      shockwaves.push({ x, y, color, radius: 2, maxRadius: 160, alpha: 1.0 });
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 14 + 4;
+        particles.push({
+          x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+          color, alpha: 1.0, decay: Math.random() * 0.02 + 0.015, size: Math.random() * 5 + 2
+        });
+      }
+    }
+
+    function renderFX() {
+      ctx.fillStyle = 'rgba(3, 3, 12, 0.25)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      shockwaves.forEach((sw, i) => {
+        sw.radius += 8; sw.alpha -= 0.04;
+        if (sw.alpha <= 0) { shockwaves.splice(i, 1); return; }
+        ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = sw.color; ctx.lineWidth = 4; ctx.globalAlpha = Math.max(0, sw.alpha);
+        ctx.stroke();
+      });
+
+      particles.forEach((p, i) => {
+        p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+        if (p.alpha <= 0) { particles.splice(i, 1); return; }
+        ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      });
+
+      requestAnimationFrame(renderFX);
+    }
+    renderFX();
+
+    /* ================================================================
+       4. LEVENSHTEIN DISTANCE
+    ================================================================ */
+    function levenshtein(a, b) {
+      const matrix = [];
+      for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+      for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+          else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+        }
+      }
+      return matrix[b.length][a.length];
+    }
+
+    /* ================================================================
+       5. GAME LOGIC ENGINE
+    ================================================================ */
+    const Game = {
+      totalLoops: 1, currentLoop: 1, currentIndex: 0, streak: 0, totalXP: 0, level: 1, sessionXP: 0,
+      wordList: [], currentQuestionMode: 'VN_TO_EN', comboTimer: null, comboDecayVal: 100,
+
+      praises: ["Good!", "Great!", "Awesome!", "Splendid!", "Unbelievable!", "🔥 PERFECT!"],
+      colors: ["#00f2fe", "#ffb700", "#ff7f00", "#ff0055", "#ff007f", "#7f00ff"],
+
+      init() {
+        Auth.init();
+
+        document.getElementById('btn-next-step').onclick = (e) => {
+          audio.playBGM(); audio.playPop();
+          this.generateWordInputs();
+        };
+
+        document.getElementById('btn-start-game').onclick = (e) => {
+          audio.playPop();
+          this.startGame();
+        };
+
+        document.getElementById('btn-check').onclick = () => this.check();
+        
+        const answerInput = document.getElementById('user-answer');
+        answerInput.onkeypress = (e) => {
+          audio.playPop();
+          if (e.key === 'Enter') this.check();
+        };
+      },
+
+      switchCard(id) {
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+      },
+
+      generateWordInputs() {
+        const count = parseInt(document.getElementById('num-words').value) || 1;
+        this.totalLoops = parseInt(document.getElementById('num-loops').value) || 1;
+        const container = document.getElementById('words-inputs-container');
+        container.innerHTML = '';
+
+        for (let i = 0; i < count; i++) {
+          const row = document.createElement('div');
+          row.className = 'word-row';
+          row.innerHTML = `
+            <input type="text" class="input-vn" placeholder="Tiếng Việt ${i + 1}">
+            <input type="text" class="input-en" placeholder="Tiếng Anh ${i + 1}">
+          `;
+          container.appendChild(row);
+        }
+        this.switchCard('setup-card');
+      },
+
+      startGame() {
+        const vnInputs = document.querySelectorAll('.input-vn');
+        const enInputs = document.querySelectorAll('.input-en');
+        this.wordList = [];
+
+        for (let i = 0; i < vnInputs.length; i++) {
+          const vn = vnInputs[i].value.trim();
+          const en = enInputs[i].value.trim().toLowerCase();
+          if (vn && en) this.wordList.push({ vn, en });
+        }
+
+        if (this.wordList.length === 0) {
+          alert("Vui lòng nhập ít nhất 1 từ vựng!");
+          return;
+        }
+
+        this.shuffleArray(this.wordList);
+        this.currentLoop = 1; this.currentIndex = 0; this.streak = 0; this.sessionXP = 0;
+        
+        setTimeout(() => {
+          this.switchCard('quiz-card');
+          this.renderQ();
+        }, 300);
+      },
+
+      startComboDecay() {
+        clearInterval(this.comboTimer);
+        this.comboDecayVal = 100;
+        this.comboTimer = setInterval(() => {
+          this.comboDecayVal -= 1.5;
+          document.getElementById('combo-decay-fill').style.width = `${Math.max(0, this.comboDecayVal)}%`;
+          if (this.comboDecayVal <= 0) {
+            clearInterval(this.comboTimer);
+            if (this.streak > 0) {
+              this.streak = 0;
+              document.getElementById('status-text').textContent = "💥 COMBO BREAK (Quá thời gian!)";
+              document.getElementById('status-text').style.color = "var(--danger)";
+              this.updateThemeColor();
+            }
+          }
+        }, 100);
+      },
+
+      renderQ() {
+        const cur = this.wordList[this.currentIndex];
+        this.currentQuestionMode = Math.random() > 0.5 ? 'VN_TO_EN' : 'EN_TO_VN';
+
+        const displayEl = document.getElementById('quiz-word');
+        const hintEl = document.getElementById('mode-hint');
+        const input = document.getElementById('user-answer');
+
+        if (this.currentQuestionMode === 'VN_TO_EN') {
+          displayEl.textContent = cur.vn;
+          hintEl.textContent = "NHÌN TIẾNG VIỆT ➡️ GÕ TIẾNG ANH";
+          input.placeholder = "Nhập từ Tiếng Anh...";
+        } else {
+          displayEl.textContent = cur.en.toUpperCase();
+          hintEl.textContent = "NHÌN TIẾNG ANH ➡️ GÕ TIẾNG VIỆT";
+          input.placeholder = "Nhập nghĩa Tiếng Việt...";
+        }
+
+        input.value = '';
+        input.focus();
+
+        this.updateHUD();
+        this.startComboDecay();
+      },
+
+      updateThemeColor() {
+        const colorIdx = Math.min(this.streak, this.colors.length - 1);
+        const currentColor = this.colors[colorIdx];
+        document.documentElement.style.setProperty('--combo-color', currentColor);
+        document.getElementById('hud-combo-text').style.color = currentColor;
+        document.getElementById('hud-combo-text').textContent = this.streak > 0 ? `🔥 Combo x${this.streak + 1}` : `🔥 Combo x1`;
+      },
+
+      updateHUD() {
+        document.getElementById('hud-loop').textContent = `${this.currentLoop}/${this.totalLoops}`;
+        document.getElementById('hud-pos').textContent = `${this.currentIndex + 1}/${this.wordList.length}`;
+        
+        // Progress %
+        const totalQuestions = this.wordList.length * this.totalLoops;
+        const currentDone = (this.currentLoop - 1) * this.wordList.length + this.currentIndex;
+        const pct = Math.floor((currentDone / totalQuestions) * 100);
+        document.getElementById('progress-fill').style.width = `${pct}%`;
+        document.getElementById('progress-text').textContent = `${pct}%`;
+
+        // Level & XP
+        this.level = Math.floor(this.totalXP / 300) + 1;
+        const currentLevelXP = this.totalXP % 300;
+        document.getElementById('hud-level').textContent = `Lv.${this.level}`;
+        document.getElementById('hud-xp-fill').style.width = `${(currentLevelXP / 300) * 100}%`;
+        document.getElementById('hud-xp-text').textContent = this.totalXP;
+
+        // Titles
+        if (this.level >= 5) document.getElementById('hud-title').textContent = "English Hero 👑";
+        else if (this.level >= 3) document.getElementById('hud-title').textContent = "Vocab Master ⚡";
+        else document.getElementById('hud-title').textContent = "Language Hunter 🏹";
+
+        this.updateThemeColor();
+      },
+
+      triggerPraise(text) {
+        const praiseEl = document.getElementById('praise-text');
+        praiseEl.textContent = text;
+        praiseEl.classList.remove('praise-animate');
+        void praiseEl.offsetWidth;
+        praiseEl.classList.add('praise-animate');
+      },
+
+      spawnXPFloat(amount, x, y) {
+        const el = document.createElement('div');
+        el.className = 'xp-float';
+        el.textContent = `+${amount} XP`;
+        el.style.left = `${x}px`; el.style.top = `${y}px`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 900);
+      },
+
+      check() {
+        clearInterval(this.comboTimer);
+        const input = document.getElementById('user-answer');
+        const ans = input.value.trim().toLowerCase();
+        const cur = this.wordList[this.currentIndex];
+        const target = (this.currentQuestionMode === 'VN_TO_EN') ? cur.en.toLowerCase() : cur.vn.toLowerCase();
+
+        const rect = input.getBoundingClientRect();
+        const clickX = rect.left + rect.width / 2, clickY = rect.top;
+
+        if (ans === target) {
+          // --- Trả lời ĐÚNG ---
+          this.streak++;
+          let gainedXP = 50 + this.streak * 20;
+
+          // Critical Hit (Tỷ lệ 20%)
+          const isCritical = Math.random() < 0.2;
+          if (isCritical) {
+            gainedXP += 150;
+            audio.playCritical();
+            this.triggerPraise("💥 CRITICAL!");
+            createExplosion(clickX, clickY, "#ff007f", 90);
+          } else {
+            audio.playCorrect(this.streak);
+            const praiseText = this.praises[Math.min(this.streak - 1, this.praises.length - 1)];
+            this.triggerPraise(praiseText);
+            createExplosion(clickX, clickY, "#00ff88", 60);
+          }
+
+          this.sessionXP += gainedXP;
+          Auth.saveXP(gainedXP);
+          this.spawnXPFloat(gainedXP, clickX, clickY);
+
+          // Camera Zoom & Shake nhẹ
+          const container = document.getElementById('card-container');
+          container.classList.add('card-zoom');
+          setTimeout(() => container.classList.remove('card-zoom'), 150);
+
+          document.getElementById('status-text').textContent = "✨ Chính xác! Tiến lên!";
+          document.getElementById('status-text').style.color = "var(--success)";
+
+          this.currentIndex++;
+
+          if (this.currentIndex >= this.wordList.length) {
+            if (this.currentLoop >= this.totalLoops) {
+              audio.playVictory();
+              document.getElementById('victory-stats').textContent = `TỔNG CỘNG NHẬN: +${this.sessionXP} XP!`;
+              this.switchCard('finish-card');
+              return;
+            } else {
+              this.currentLoop++;
+              this.currentIndex = 0;
+              this.shuffleArray(this.wordList);
+            }
+          }
+
+          setTimeout(() => this.renderQ(), 450);
+
+        } else {
+          // --- Kiểm tra GẦN ĐÚNG ---
+          const dist = levenshtein(ans, target);
+          if (dist === 1 && ans.length > 2) {
+            document.getElementById('status-text').textContent = "🤏 Gần đúng rồi! Thiếu/Sai 1 ký tự!";
+            document.getElementById('status-text').style.color = "var(--warning)";
+            audio.playPop();
+            this.startComboDecay();
+            return;
+          }
+
+          // --- Trả lời SAI HOÀN TOÀN ---
+          this.streak = 0;
+          audio.playWrong();
+
+          document.getElementById('status-text').textContent = "💥 COMBO BREAK! Reset về vị trí đầu!";
+          document.getElementById('status-text').style.color = "var(--danger)";
+
+          const container = document.getElementById('card-container');
+          container.classList.add('camera-shake');
+          setTimeout(() => container.classList.remove('camera-shake'), 250);
+
+          this.currentIndex = 0;
+          setTimeout(() => this.renderQ(), 750);
+        }
+      },
+
+      shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+      }
+    };
+
+    window.onload = () => Game.init();
+  </script>
+</body>
+</html>
